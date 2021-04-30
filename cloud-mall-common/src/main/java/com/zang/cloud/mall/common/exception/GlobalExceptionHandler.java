@@ -1,0 +1,62 @@
+package com.zang.cloud.mall.common.exception;
+
+import com.zang.cloud.mall.common.common.ApiRestResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(Exception.class)
+    @ResponseBody
+    public Object handleException(Exception e){
+
+        log.error("系统异常：", e);
+        return ApiRestResponse.error(ImoocMallExceptionEnum.SYSTEM_ERROR);
+    }
+
+    @ExceptionHandler(ImoocException.class)
+    @ResponseBody
+    public Object handleImoocException(ImoocException e){
+
+        log.error("业务异常：", e);
+        return ApiRestResponse.error(e.getCode(), e.getMessage());
+    }
+
+    //商品分类 传入参数异常
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public ApiRestResponse handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException e) {
+        log.error("MethodArgumentNotValidException: ", e);
+        return handleBindingResult(e.getBindingResult());
+    }
+
+    private ApiRestResponse handleBindingResult(BindingResult result) {
+        //把异常处理为对外暴露的提示
+        List<String> list = new ArrayList<>();
+        if (result.hasErrors()) {
+            List<ObjectError> allErrors = result.getAllErrors();
+            for (ObjectError objectError : allErrors) {
+                String message = objectError.getDefaultMessage();
+                list.add(message);
+            }
+        }
+        if (list.size() == 0) {
+            return ApiRestResponse.error(ImoocMallExceptionEnum.REQUEST_PARAM_ERROR);
+        }
+        return ApiRestResponse
+                .error(ImoocMallExceptionEnum.REQUEST_PARAM_ERROR.getCode(), list.toString());
+    }
+}
